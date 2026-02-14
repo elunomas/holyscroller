@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-serif: "Georgia", "Times New Roman", serif;
+}
+
+body {
+  background: #fafaf9;
+  color: #1c1917;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Slide-up animation for credits modal */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Ensure serif font is available for verse text */
+.font-serif {
+  font-family: "Georgia", "Times New Roman", serif;
+}
