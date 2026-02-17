@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { FeedItem, Verse } from "@/types";
 import { CommentSection } from "@/components/Comments/CommentSection";
+import {useComments} from "@/hooks/useComments";
 
 interface PostCardProps {
   feedItem: FeedItem;
@@ -13,6 +14,7 @@ interface PostCardProps {
 
 export function PostCard({ feedItem, verse, onLike, onHide }: PostCardProps) {
   const [showComments, setShowComments] = useState(false);
+  const { comments, addComment, deleteComment } = useComments(feedItemId);
 
   return (
     <article className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
@@ -54,7 +56,7 @@ export function PostCard({ feedItem, verse, onLike, onHide }: PostCardProps) {
           aria-label="Comments"
         >
           <span>💬</span>
-          <span>Comment</span>
+          <span>Comment ({comments.length})</span>
         </button>
 
         <button
