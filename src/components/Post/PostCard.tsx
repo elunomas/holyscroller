@@ -14,7 +14,7 @@ interface PostCardProps {
 
 export function PostCard({ feedItem, verse, onLike, onHide }: PostCardProps) {
   const [showComments, setShowComments] = useState(false);
-  const { comments, addComment, deleteComment } = useComments(feedItemId);
+  const { comments, addComment, deleteComment } = useComments(feedItem.id);
 
   return (
     <article className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
