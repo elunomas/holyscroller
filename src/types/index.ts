@@ -68,6 +68,16 @@ export interface CachedChapter {
   verseCount: number;
 }
 
+/** Tracks when a verse was last shown for recency de-boosting */
+export interface VerseHistory {
+  /** Verse ID (primary key), e.g. "GEN:1:1" */
+  verseId: string;
+  /** When this verse was last shown in the feed */
+  lastSeenAt: Date;
+  /** How many times this verse has been shown */
+  seenCount: number;
+}
+
 /** Book info for random selection */
 export interface BookInfo {
   /** 3-letter abbreviation used by bible-api.com */

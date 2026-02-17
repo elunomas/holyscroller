@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from "dexie";
-import type { Verse, FeedItem, Comment, CachedChapter } from "@/types";
+import type { Verse, FeedItem, Comment, CachedChapter, VerseHistory } from "@/types";
 
 /**
  * Daily Bread database — Dexie wrapper around IndexedDB.
@@ -15,6 +15,7 @@ class DailyBreadDB extends Dexie {
   feedItems!: EntityTable<FeedItem, "id">;
   comments!: EntityTable<Comment, "id">;
   cachedChapters!: EntityTable<CachedChapter, "id">;
+  verseHistory!: EntityTable<VerseHistory, "verseId">;
 
   constructor() {
     super("daily-bread");
@@ -28,6 +29,16 @@ class DailyBreadDB extends Dexie {
       comments: "id, feedItemId, parentId, createdAt",
       // Cache tracking: which chapters we've already fetched
       cachedChapters: "id, bookId, chapter",
+    });
+
+    this.version(2).stores({
+      // All existing tables carry forward unchanged
+      verses: "id, book, chapter, bookIndex, [book+chapter]",
+      feedItems: "id, verseId, order, liked, hidden, shownAt",
+      comments: "id, feedItemId, parentId, createdAt",
+      cachedChapters: "id, bookId, chapter",
+      // NEW: track verse view history for recency de-boosting
+      verseHistory: "verseId, lastSeenAt",
     });
   }
 }

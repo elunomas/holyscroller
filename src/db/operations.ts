@@ -1,21 +1,29 @@
 import { db } from "@/db";
-import { getRandomVerses } from "@/db/verse-cache";
+import { getRandomVerses, prefetchMultipleChapters } from "@/db/verse-cache";
 import { generateId, startOfToday } from "@/lib/utils";
-import type { FeedItem, Verse } from "@/types";
+import type { FeedItem, Verse, VerseHistory } from "@/types";
 
 const BATCH_SIZE = 10;
+const PREFETCH_CHAPTER_COUNT = 5;
 
 /**
  * Generate a new batch of feed items.
- * 1. First, check for liked items from yesterday that should resurface.
- * 2. Then pick random verses (fetching new chapters if needed).
- * 3. Create feed items and store them.
+ * 1. Prefetch multiple chapters on first load (cache is empty/small).
+ * 2. Check for liked items from yesterday that should resurface.
+ * 3. Pick random verses using weighted selection (recency de-boosted).
+ * 4. Create feed items, record verse history, and store them.
  */
 export async function generateFeedBatch(): Promise<
   Array<FeedItem & { verse: Verse }>
 > {
   const today = startOfToday();
   const results: Array<FeedItem & { verse: Verse }> = [];
+
+  // 0. Prefetch multiple chapters if cache is empty or small
+  const cachedCount = await db.cachedChapters.count();
+  if (cachedCount < PREFETCH_CHAPTER_COUNT) {
+    await prefetchMultipleChapters(PREFETCH_CHAPTER_COUNT);
+  }
 
   // 1. Resurface liked items from previous days
   const likedItems = await db.feedItems
@@ -43,7 +51,7 @@ export async function generateFeedBatch(): Promise<
       liked: false,
       hidden: false,
       shownAt: new Date(),
-      order: Date.now() + Math.random(),
+      order: Math.random(),
     };
     await db.feedItems.add(newItem);
     results.push({ ...newItem, verse });
@@ -58,21 +66,41 @@ export async function generateFeedBatch(): Promise<
     (await db.feedItems.toArray()).map((fi) => fi.verseId)
   );
 
-  // Get random verses (this may fetch new chapters from the API)
-  const randomVerses = await getRandomVerses(remaining, existingVerseIds);
+  // Build recency map from verseHistory table
+  const historyRecords = await db.verseHistory.toArray();
+  const recencyMap = new Map<string, VerseHistory>();
+  for (const record of historyRecords) {
+    recencyMap.set(record.verseId, record);
+  }
 
-  // 3. Create feed items
+  // Get random verses with recency de-boosting
+  const randomVerses = await getRandomVerses(
+    remaining,
+    existingVerseIds,
+    recencyMap
+  );
+
+  // 3. Create feed items and record history
+  const now = new Date();
   for (const verse of randomVerses) {
     const feedItem: FeedItem = {
       id: generateId(),
       verseId: verse.id,
       liked: false,
       hidden: false,
-      shownAt: new Date(),
-      order: Date.now() + Math.random(),
+      shownAt: now,
+      order: Math.random(),
     };
     await db.feedItems.add(feedItem);
     results.push({ ...feedItem, verse });
+
+    // Record in verseHistory for future recency de-boosting
+    const existing = recencyMap.get(verse.id);
+    await db.verseHistory.put({
+      verseId: verse.id,
+      lastSeenAt: now,
+      seenCount: existing ? existing.seenCount + 1 : 1,
+    });
   }
 
   return results;
